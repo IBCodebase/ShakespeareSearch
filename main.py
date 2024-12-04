@@ -18,9 +18,17 @@ def removeLegalNotice(text):
 def cleanUp(text):
     #this will turn the big chunk of text into something usable
     #remove legal notice is already called in getCompleteWorksOfShakespeare()!
-    list =text.replace("!", " ").replace(".", " ").replace("(","").replace(")","").replace(",", " ").replace("\n", " ").replace(";"," ").replace("?", " ").replace("\""," ").split(" ")
+    list =text.replace("!", " ").replace("]", "").replace("[", "").replace(".", " ").replace("(","").replace(")","").replace(",", " ").replace("\n", " ").replace(";"," ").replace("?", " ").replace("\""," ").split(" ")
     filtered_list = [item for item in list if item != ""]
-    return filtered_list
+    lower_list = [word.lower() for word in filtered_list]
+    return lower_list
+
+def getCompleteWorksOneString():
+    #this one comes pre-cleaned up
+    url = "https://ocw.mit.edu/ans7870/6/6.006/s08/lecturenotes/files/t8.shakespeare.txt"
+    response = requests.get(url)
+
+    return cleanUp(removeLegalNotice(response.text).split("DOWNLOAD TIME OR FOR MEMBERSHIP.>> ")[1])
 
 def getCompleteWorksOfShakespeare():
     #that's an awfully funny function name
@@ -28,7 +36,6 @@ def getCompleteWorksOfShakespeare():
     #the list is broken up by areas that are convenient for scraping, but this method does not produce clean data
     url = "https://ocw.mit.edu/ans7870/6/6.006/s08/lecturenotes/files/t8.shakespeare.txt"
     response = requests.get(url)
-
     return removeLegalNotice(response.text).split("DOWNLOAD TIME OR FOR MEMBERSHIP.>> ")[1].split("THE END")[:-1]
 
 def getPlayName(text):
@@ -58,6 +65,7 @@ def getPlayDict():
 
 #-------------------------------------------------------------------------------
 #----------------------------------------analysis tools-------------------------
+
 
 def getFrequency(textArray):
     # this takes an array of text, then returns a dictionary with each word as the key, and the num of times used as
@@ -110,6 +118,22 @@ def findPercentUniqueWords():
     for play in playDictUnique:
         playDictUnique[play] = round(float(playDictUnique[play])/float(playDictTotal[play]) * 100, 3)
     return playDictUnique
+
+def findMostFrequentWords():
+    wordDict = getFrequency(getCompleteWorksOneString())
+    return dict(sorted(wordDict.items(), key=lambda item: item[1], reverse=True))
+
+def findTop100Words():
+    #I know this is a jank method, give me a break it works fine
+    wordDict = findMostFrequentWords()
+    newDict = {}
+    counter = 0
+    for word in wordDict:
+        if counter == 100:
+            break
+        newDict[word] = wordDict[word]
+        counter = counter + 1
+    return newDict
 #-------------------------------------------------------------------------------------
 #---------------------------graphing--------------------------------------------------
 def numUniqueWordsGraph():
@@ -148,6 +172,23 @@ def percentUniqueWordsGraph():
 
     plt.show()
 
+def top100WordsGraph():
+    word_counts = findTop100Words()
+
+    df = pd.DataFrame(list(word_counts.items()), columns=['Word', 'Times Used'])
+
+    df = df.sort_values(by='Times Used', ascending=False)
+
+    plt.figure(figsize=(15, 8))  # Adjust size for readability
+    df.plot(kind='bar', x='Word', y='Times Used', legend=False, ax=plt.gca())
+
+    plt.title('Top 100 words in Shakespeare\'s Works')
+    plt.xlabel('Word')
+    plt.ylabel('Times Used')
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+
+    plt.show()
 #-------------------------------------------------------------------------------
 #---------------------------------------reading json----------------------------
 def jsonToDict():
@@ -157,7 +198,8 @@ def jsonToDict():
 #-------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    percentUniqueWordsGraph()
-
+    #percentUniqueWordsGraph()
+    #createItemizedJson()
+    top100WordsGraph()
     #numUniqueWordsGraph()
 
